@@ -23,12 +23,14 @@ interface IGetImageSize {
 }
 
 const getImageSize: IGetImageSize = async (file) => {
-  if (Buffer.isBuffer(file)) {
-    let { width, height, type } = probe.sync(file);
-    return { width, height, type };
-  } else { 
-    let { width, height, type } = await probe(file)
-    return { width, height, type };
+  try {
+    let results = typeof file === "string" ? await probe(file) : await probe.sync(Buffer.from(file));
+    if (results) {
+      const { width, height, type } = results
+      return { width, height, type };
+    }
+  } catch (e) {
+    console.error(e)
   }
 };
 
