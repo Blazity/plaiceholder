@@ -24,10 +24,10 @@ interface IGetImageSize {
 
 const getImageSize: IGetImageSize = async (file) => {
   if (Buffer.isBuffer(file)) {
-    let { width, height, type } = await probe(require('fs').createReadStream(file));
+    let { width, height, type } = probe.sync(file);
     return { width, height, type };
   } else { 
-    let { width, height, type } = await probe(file, { rejectUnauthorized: false });
+    let { width, height, type } = await probe(file)
     return { width, height, type };
   }
 };
