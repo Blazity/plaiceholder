@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import NodeCache from "node-cache";
 import fetch from "node-fetch";
-import sizeOf from "image-size";
+import probe from "probe-image-size";
 import sharp from "sharp";
 import { arrayChunk } from "./utils";
 
@@ -19,17 +19,17 @@ interface IGetImageSizeReturn {
 }
 
 interface IGetImageSize {
-  (file: TGetImageSizeParam): IGetImageSizeReturn;
+  (file: TGetImageSizeParam): Promise<IGetImageSizeReturn>;
 }
 
-const getImageSize: IGetImageSize = (file) => {
-  const { width, height, type } = sizeOf(file);
-
-  return {
-    width,
-    height,
-    type,
-  };
+const getImageSize: IGetImageSize = async (file) => {
+  if (Buffer.isBuffer(file)) {
+    let { width, height, type } = await probe(require('fs').createReadStream(file));
+    return { width, height, type };
+  } else { 
+    let { width, height, type } = await probe(file, { rejectUnauthorized: false });
+    return { width, height, type };
+  }
 };
 
 /* loadImage
@@ -73,7 +73,7 @@ interface ILoadImage {
 
 const loadImage: ILoadImage = async (imagePath) => {
   if (Buffer.isBuffer(imagePath)) {
-    const imageSize = getImageSize(imagePath);
+    const imageSize = await getImageSize(imagePath);
 
     return {
       file: imagePath,
@@ -86,7 +86,7 @@ const loadImage: ILoadImage = async (imagePath) => {
 
   if (imagePath.startsWith("http")) {
     const buffer = await loadRemoteImage(imagePath);
-    const imageSize = getImageSize(buffer);
+    const imageSize = await getImageSize(buffer);
 
     return {
       file: buffer,
@@ -103,7 +103,7 @@ const loadImage: ILoadImage = async (imagePath) => {
     );
 
   const file = path.join("./public/", imagePath);
-  const imageSize = getImageSize(file);
+  const imageSize = await getImageSize(file);
 
   return {
     file,
